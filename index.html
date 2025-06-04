@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>memo2 穴埋め対応</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f4f4f4; }
+    .tabs { display: flex; background: #333; color: white; position: sticky; top: 0; z-index: 1000; }
+    .tab { padding: 10px 20px; cursor: pointer; }
+    .tab.active { background: #555; }
+    .content { display: none; padding: 20px; }
+    .content.active { display: block; }
+    textarea, input[type="text"] { width: 100%; padding: 10px; margin-top: 10px; }
+    textarea { resize: vertical; }
+    button { margin-top: 10px; padding: 10px 20px; }
+    .btn-group button { margin-right: 10px; }
+    .score { font-weight: bold; margin-left: 10px; }
+    .score.red { color: red; }
+    .score.green { color: green; }
+    .edit-icon { cursor: pointer; margin-left: 10px; }
+    .edit-field { width: 100%; padding: 5px; margin-top: 5px; display: block; }
+    .input-blank { display: inline-block; width: 120px; margin: 0 5px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<script>
+// コード本体が非常に長いため、ファイル内で管理します。
+</script>
+<h1>memo2 穴埋め＋通常問題 統合版</h1>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab(0)">演習（A）</div>
+  <div class="tab" onclick="switchTab(1)">入力（B）</div>
+  <div class="tab" onclick="switchTab(2)">確認（C）</div>
+  <div class="tab" onclick="switchTab(3)">グラフ（D）</div>
+</div>
+
+<div class="content active" id="exercise-tab">
+  <h2 id="exerciseQuestion">ここに問題が表示されます</h2>
+  <textarea id="exerciseAnswer" rows="3" onkeydown="checkEnter(event)" placeholder="ここに解答を入力"></textarea>
+  <button onclick="startSpeechRecognition('exerciseAnswer')">🎤音声入力（解答）</button>
+  <p id="correctAnswer"></p>
+  <div class="btn-group">
+    <button onclick="gradeAnswer('maru')">○</button>
+    <button onclick="gradeAnswer('sankaku')">△</button>
+    <button onclick="gradeAnswer('batsu')">×</button>
+  </div>
+  <button onclick="startExercise()">通常出題スタート</button>
+  <button onclick="startLowScoreExercise()">スコア-3以下だけ出題</button>
+  <br><br>
+  <select id="categorySelect"></select>
+  <button onclick="startExerciseByCategory()">このカテゴリで出題</button>
+  <hr>
+  <h2>穴埋め問題</h2>
+  <div id="fillQuestionDisplay"></div>
+  <div id="fillInputs"></div>
+  <p id="fillResult"></p>
+  <button onclick="startFillExercise()">穴埋め問題スタート</button>
+</div>
+
+<div class="content" id="input-tab">
+  <h2>通常問題入力</h2>
+  <textarea id="newQuestion" placeholder="問題を入力"></textarea>
+  <button onclick="startSpeechRecognition('newQuestion')">🎤音声入力（問題）</button>
+  <textarea id="newAnswer" placeholder="解答を入力"></textarea>
+  <button onclick="startSpeechRecognition('newAnswer')">🎤音声入力（解答）</button>
+  <input type="text" id="newCategory" placeholder="カテゴリを入力">
+  <br>
+  <button onclick="saveQuestion()">保存</button>
+  <hr>
+  <h2>穴埋め問題入力</h2>
+  <div id="newFillQuestion" contenteditable="true" style="border:1px solid #ccc; padding:10px; min-height:100px; background:#fff;"></div>
+  <button onclick="saveFillQuestion()">保存</button>
+</div>
+
+<div class="content" id="confirm-tab">
+  <h2>問題確認／編集</h2>
+
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="switchConfirmTab('normal')">📘 通常問題</button>
+    <button class="sub-tab" onclick="switchConfirmTab('fill')">🟥 穴埋め問題</button>
+  </div>
+
+  <div id="normalListSection">
+    <ul id="questionList"></ul>
+  </div>
+
+  <div id="fillListSection" style="display: none;">
+    <ul id="fillQuestionList"></ul>
+  </div>
+
+  <hr>
+  <h4>📥 全データのエクスポート／📤 インポート</h4>
+  <input type="file" id="fileInput">
+  <button onclick="uploadAllData()">📤 全データをインポート</button>
+  <button onclick="downloadAllData()">📥 全データをエクスポート</button>
+</div>
+
+ 
+</div>
+
+<div class="content" id="graph-tab">
+  <h2>カテゴリ別 正答率グラフ</h2>
+  <canvas id="scoreChart" width="400" height="200"></canvas>
+</div>
+
+<script src="./memo2_logic.js"></script>
+</body>
+</html>
