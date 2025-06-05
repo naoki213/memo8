@@ -25,9 +25,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<script>
-// コード本体が非常に長いため、ファイル内で管理します。
-</script>
 <h1>memo2 穴埋め＋通常問題 統合版</h1>
 
 <div class="tabs">
@@ -57,7 +54,8 @@
   <div id="fillQuestionDisplay"></div>
   <div id="fillInputs"></div>
   <p id="fillResult"></p>
-  <button onclick="startFillExercise()">穴埋め問題スタート</button>
+  <select id="fillCategorySelect"></select>
+  <button onclick="startFillExerciseByCategory()">このカテゴリで出題</button>
 </div>
 
 <div class="content" id="input-tab">
@@ -72,33 +70,55 @@
   <hr>
   <h2>穴埋め問題入力</h2>
   <div id="newFillQuestion" contenteditable="true" style="border:1px solid #ccc; padding:10px; min-height:100px; background:#fff;"></div>
+  <input type="text" id="newFillCategory" placeholder="カテゴリを入力（穴埋め）">
   <button onclick="saveFillQuestion()">保存</button>
 </div>
 
-<div class="content" id="confirm-tab">
-  <h2>問題確認／編集</h2>
+<div id="tabConfirm" class="content">
+  <h2>✅ 問題一覧・編集</h2>
 
   <div class="sub-tabs">
-    <button class="sub-tab active" onclick="switchConfirmTab('normal')">📘 通常問題</button>
-    <button class="sub-tab" onclick="switchConfirmTab('fill')">🟥 穴埋め問題</button>
+    <button class="sub-tab active" onclick="switchConfirmTab('normal')">📝 通常問題</button>
+    <button class="sub-tab" onclick="switchConfirmTab('fill')">🧩 穴埋め問題</button>
   </div>
 
   <div id="normalListSection">
+    <input type="file" id="fileInputNormal" />
+    <div style="margin: 10px 0;">
+      <button onclick="downloadQuestions()">通常問題を書き出す</button>
+      <button onclick="uploadQuestions()">通常問題を読み込む</button>
+    </div>
     <ul id="questionList"></ul>
   </div>
 
   <div id="fillListSection" style="display: none;">
+    <input type="file" id="fileInputAll" />
+    <div style="margin: 10px 0;">
+      <button onclick="downloadAllData()">全データを書き出す</button>
+      <button onclick="uploadAllData()">全データを読み込む</button>
+    </div>
+
+    <div style="margin: 10px 0;">
+      <label>📂 カテゴリで絞り込み:
+        <select id="fillCategoryFilter" onchange="renderFillList()"></select>
+      </label>
+    </div>
+
+    <div style="margin: 10px 0;">
+      <label>🔁 カテゴリ一括置換:
+        <input type="text" id="fillOldCategory" placeholder="変更前カテゴリ">
+        →
+        <input type="text" id="fillNewCategory" placeholder="変更後カテゴリ">
+        <button onclick="bulkUpdateFillCategory()">一括変更</button>
+      </label>
+    </div>
+
+    <div style="margin: 10px 0;">
+      <button onclick="confirmDeleteAllFillQuestions()">⚠️ 穴埋め問題をすべて削除</button>
+    </div>
+
     <ul id="fillQuestionList"></ul>
   </div>
-
-  <hr>
-  <h4>📥 全データのエクスポート／📤 インポート</h4>
-  <input type="file" id="fileInput">
-  <button onclick="uploadAllData()">📤 全データをインポート</button>
-  <button onclick="downloadAllData()">📥 全データをエクスポート</button>
-</div>
-
- 
 </div>
 
 <div class="content" id="graph-tab">
@@ -106,6 +126,6 @@
   <canvas id="scoreChart" width="400" height="200"></canvas>
 </div>
 
-<script src="./memo2_logic.js"></script>
+<script src="./memo2_logic2.js"></script>
 </body>
 </html>
