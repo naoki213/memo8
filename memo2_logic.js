@@ -152,23 +152,36 @@ function nextQuestion() {
   }
   const q = currentQueue[currentIndex];
   document.getElementById('exerciseQuestion').innerHTML =
-    `Q${q.index + 1}: <span id="questionText">${q.question}</span> <span class="edit-icon" onclick="editField('questionText', ${q.index}, 'question')">✏️</span>`;
+    `Q${q.index + 1}: <span id="questionText">${q.question}</span> <span class="edit-icon" onclick="editField('questionText', ${q.index}, 'question')"✏️</span>`;
   document.getElementById('exerciseAnswer').value = '';
   document.getElementById('correctAnswer').innerHTML =
     `<span id="answerText"></span> <span class="edit-icon" onclick="editField('answerText', ${q.index}, 'answer')">✏️</span>`;
   showAnswerToggle = false;
 }
 
+// ================= 通常問題：採点と再出題挿入 =================
 function gradeAnswer(grade) {
   const q = currentQueue[currentIndex];
   const delta = grade === 'maru' ? 1 : grade === 'sankaku' ? -0.5 : -1;
   questions[q.index].score += delta;
   questions[q.index].answerCount++;
   if (grade === 'maru') questions[q.index].correctCount++;
+
+  // 🔁 不正解・部分正解の場合は currentQueue に再出題として挿入
+  let insertOffset = null;
+  if (grade === 'batsu') insertOffset = 5;
+  if (grade === 'sankaku') insertOffset = 10;
+  if (insertOffset !== null && currentIndex + insertOffset < currentQueue.length) {
+    const retryItem = { ...q };
+    currentQueue.splice(currentIndex + insertOffset, 0, retryItem);
+  }
+
+  // 保存と次の問題へ
   localStorage.setItem('questions', JSON.stringify(questions));
   currentIndex++;
   nextQuestion();
 }
+
 
 // ================= Enterキーで解答表示切替 =================
 function checkEnter(event) {
@@ -183,14 +196,27 @@ function checkEnter(event) {
 // ================= 穴埋め問題：保存 =================
 function saveFillQuestion() {
   const html = document.getElementById('newFillQuestion').innerHTML.trim();
+  const category = document.getElementById('newFillCategory').value.trim();
   if (!html) return;
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   const spans = doc.querySelectorAll('span[style*="rgb(221, 0, 0)"]');
   const answers = Array.from(spans).map(span => span.textContent.trim());
-  fillQuestions.push({ html, answers });
+  if (answers.length === 0) return;
+
+  fillQuestions.push({
+    html,
+    answers,
+    category,
+    score: 0,
+    answerCount: 0,
+    correctCount: 0
+  });
+
   localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
   document.getElementById('newFillQuestion').innerHTML = '';
+  document.getElementById('newFillCategory').value = '';
 }
 
 // ================= 穴埋め問題：出題 =================
@@ -233,14 +259,33 @@ function showFillQuestion() {
           if (next) {
             next.focus();
           } else {
-            checkFillAnswer(); // 判定だけ
+            checkFillAnswer(); // 正誤判定
           }
         } else {
-          currentIndex++;
-          if (currentIndex < currentQueue.length) {
-            showFillQuestion();
+          if (e.ctrlKey) {
+            // ✅ Ctrl + Enter：正解として処理し、再出題キューから除外
+            const index = currentQueue[currentIndex].index;
+            fillQuestions[index].correctCount = (fillQuestions[index].correctCount ?? 0) + 1;
+            fillQuestions[index].score = (fillQuestions[index].score ?? 0) + 1;
+
+            // 再出題対象から除外（currentQueue から削除）
+            currentQueue.splice(currentIndex, 1);
+
+            localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
+
+            if (currentIndex < currentQueue.length) {
+              showFillQuestion();
+            } else {
+              alert('全問終了');
+            }
           } else {
-            alert('全問終了');
+            // 通常の Enter → 不正解のまま次へ（currentIndex++）
+            currentIndex++;
+            if (currentIndex < currentQueue.length) {
+              showFillQuestion();
+            } else {
+              alert('全問終了');
+            }
           }
         }
       }
@@ -252,10 +297,10 @@ function showFillQuestion() {
   document.getElementById('fillQuestionDisplay').innerHTML = `<strong>Q${q.index + 1}:</strong> ` + doc.body.innerHTML;
   document.getElementById('fillResult').textContent = '';
 
-  // 🔽追加：最初の入力欄に自動フォーカス
   const firstInput = inputArea.querySelector('input');
   if (firstInput) firstInput.focus();
 }
+
 function checkFillAnswer() {
   const inputs = document.querySelectorAll('#fillInputs input');
   const userAnswers = Array.from(inputs).map(input => input.value.trim());
@@ -283,6 +328,57 @@ function checkFillAnswer() {
 
   localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
   isFillAnswered = true;
+}
+function checkFillAnswer() {
+  // ① 現在の入力欄のすべての input を取得
+  const inputs = document.querySelectorAll('#fillInputs input');
+
+  // ② 入力された答えを取得（trimで空白を除く）
+  const userAnswers = Array.from(inputs).map(input => input.value.trim());
+
+  // ③ 正しい答えのリストを取得（currentQueue に入っている currentIndex の問題）
+  const correctAnswers = currentQueue[currentIndex].answers;
+
+  let allCorrect = true;
+  const feedback = [];
+
+  // ④ ひとつずつ答えを比較して、合ってるかチェック
+  for (let i = 0; i < correctAnswers.length; i++) {
+    if (userAnswers[i] !== correctAnswers[i]) {
+      allCorrect = false; // 間違いが1つでもあれば false
+      inputs[i].style.color = 'red'; // 不正解を赤く
+    } else {
+      inputs[i].style.color = 'black'; // 正解は黒に戻す
+    }
+    // フィードバック用（例： (リンゴ / りんご)）
+    feedback.push(`(${userAnswers[i]} / ${correctAnswers[i]})`);
+  }
+
+  // ⑤ 結果をテキストで表示
+  const resultText = allCorrect ? '正解！' : `不正解: ${feedback.join(' , ')}`;
+  document.getElementById('fillResult').textContent = resultText;
+
+  // ⑥ スコアやカウントを更新（正答率・スコア向上など）
+  const index = currentQueue[currentIndex].index;
+  fillQuestions[index].answerCount = (fillQuestions[index].answerCount ?? 0) + 1;
+  if (allCorrect) {
+    fillQuestions[index].correctCount = (fillQuestions[index].correctCount ?? 0) + 1;
+    fillQuestions[index].score = (fillQuestions[index].score ?? 0) + 1;
+  } else {
+    fillQuestions[index].score = (fillQuestions[index].score ?? 0) - 1;
+  }
+
+  // ⑦ 保存
+  localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
+
+  // ⑧ フラグセット → この問題は解答済みで、Enterで次に進める状態に
+  isFillAnswered = true;
+
+  // 🔽 ⑨ 追加した再出題機能（不正解だったら5問後に同じ問題を追加）
+  if (!allCorrect && currentIndex + 5 < currentQueue.length) {
+    const retryItem = { ...currentQueue[currentIndex] };
+    currentQueue.splice(currentIndex + 5, 0, retryItem);
+  }
 }
 
 // ================= 通常問題：編集・削除 =================
@@ -334,16 +430,25 @@ function renderList() {
 function renderFillList() {
   const list = document.getElementById('fillQuestionList');
   list.innerHTML = '';
+
+  const selectedCategory = document.getElementById('fillCategoryFilter')?.value || '';
+
   fillQuestions.forEach((q, i) => {
+    if (selectedCategory && selectedCategory !== 'すべて' && q.category !== selectedCategory) return;
+
     const scoreClass = q.score <= -3 ? 'red' : (q.score >= 3 ? 'green' : '');
     const rate = (q.answerCount > 0)
       ? ((q.correctCount / q.answerCount) * 100).toFixed(1)
       : '0.0';
     const li = document.createElement('li');
-    li.innerHTML = `問題${i + 1}: ${q.html}<br>答え: ${q.answers.join(', ')} 
-      <span class="score ${scoreClass}">（${q.score}）</span> 
-      回答数: ${q.answerCount} ／ 正答率: ${rate}% 
-      <button onclick="deleteFillQuestion(${i})">🗑削除</button>`;
+    li.innerHTML = `
+      問題${i + 1}: ${q.html}<br>
+      カテゴリ: <input value="${q.category || ''}" onchange="editFillCategory(${i}, this.value)">
+      ／ 答え: ${q.answers.join(', ')}
+      <span class="score ${scoreClass}">（${q.score}）</span>
+      回答数: ${q.answerCount} ／ 正答率: ${rate}%
+      <button onclick="deleteFillQuestion(${i})">🗑削除</button>
+    `;
     list.appendChild(li);
   });
 }
@@ -446,7 +551,8 @@ function downloadAllData() {
   document.body.removeChild(a);
 }
 function uploadAllData() {
-  const fileInput = document.getElementById('fileInput');
+  const fileInput = document.getElementById('fileInputAll');
+
   const file = fileInput.files[0];
   if (!file) return alert('ファイルを選択してください');
   const reader = new FileReader();
@@ -475,6 +581,8 @@ function uploadAllData() {
       alert('インポート完了');
       renderList();
       renderFillList();
+      updateFillCategoryOptions(); // ← 追加
+
     } catch {
       alert('不正なデータです');
     }
@@ -517,3 +625,117 @@ function deleteFillQuestion(index) {
   }
 }
 
+// ================= 穴埋め問題：入力欄ペースト時に即保存 =================
+document.addEventListener('DOMContentLoaded', () => {
+  const fillInput = document.getElementById('newFillQuestion');
+  if (fillInput) {
+    fillInput.addEventListener('paste', () => {
+      setTimeout(() => {
+        saveFillQuestion();
+      }, 100);
+    });
+  }
+
+  updateFillCategoryOptions(); // ← これを追加
+});
+
+document.getElementById('newFillQuestion').addEventListener('paste', function (e) {
+  const clipboardData = (e.clipboardData || window.clipboardData);
+  const pastedText = clipboardData.getData('text/html') || clipboardData.getData('text/plain');
+  if (!pastedText.includes('◆')) return;
+
+  e.preventDefault();
+
+  const parts = pastedText.split(/◆/).map(part => part.trim()).filter(part => part);
+  const category = document.getElementById('newFillCategory')?.value.trim() || '';
+
+  parts.forEach(part => {
+    const html = part;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const spans = doc.querySelectorAll('span[style*="rgb(221, 0, 0)"]');
+    const answers = Array.from(spans).map(span => span.textContent.trim());
+    if (answers.length === 0) return; // マスクなしはスキップ
+
+    fillQuestions.push({ html, answers, category, score: 0, answerCount: 0, correctCount: 0 });
+  });
+
+  localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
+  alert(`${parts.length}件の穴埋め問題を保存しました`);
+  document.getElementById('newFillQuestion').innerHTML = '';
+});
+function confirmDeleteAllQuestions() {
+  const pw = prompt("パスワードを入力してください");
+  if (pw !== "2410") {
+    alert("パスワードが間違っています。削除を中止します。");
+    return;
+  }
+  if (confirm("本当に通常問題をすべて削除しますか？")) {
+    questions = [];
+    localStorage.setItem('questions', JSON.stringify(questions));
+    renderList();
+    updateCategoryOptions();
+    renderChart();
+    alert("通常問題をすべて削除しました。");
+  }
+}
+
+function confirmDeleteAllFillQuestions() {
+  const pw = prompt("パスワードを入力してください");
+  if (pw !== "2410") {
+    alert("パスワードが間違っています。削除を中止します。");
+    return;
+  }
+  if (confirm("本当に穴埋め問題をすべて削除しますか？")) {
+    fillQuestions = [];
+    localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
+    renderFillList();
+    updateFillCategoryOptions();
+    alert("穴埋め問題をすべて削除しました。");
+  }
+}
+function editFillCategory(index, newCategory) {
+  fillQuestions[index].category = newCategory;
+  localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
+}
+function startFillExerciseByCategory() {
+  const selected = document.getElementById('fillCategorySelect').value;
+  const filtered = fillQuestions
+    .map((q, i) => ({ ...q, index: i }))
+    .filter(q => !selected || (q.category || '未分類') === selected);
+
+  if (filtered.length === 0) return alert('該当カテゴリに穴埋め問題がありません');
+
+  const weighted = [];
+  filtered.forEach(q => {
+    const weight = Math.max(1, 10 - (q.score ?? 0));
+    for (let j = 0; j < weight; j++) weighted.push(q);
+  });
+
+  shuffle(weighted);
+  currentQueue = weighted;
+  currentIndex = 0;
+  showFillQuestion();
+}
+function updateFillCategoryOptions() {
+  const select = document.getElementById('fillCategorySelect');
+  if (!select) return;
+
+  const categories = [...new Set(fillQuestions.map(q => q.category || '未分類'))];
+  categories.sort();
+
+  select.innerHTML = '';
+
+  // ✅ 追加：「すべてのカテゴリ」選択肢
+  const allOption = document.createElement('option');
+  allOption.value = '';
+  allOption.textContent = 'すべてのカテゴリ';
+  select.appendChild(allOption);
+
+  categories.forEach(cat => {
+    const option = document.createElement('option');
+    option.value = cat;
+    option.textContent = cat;
+    select.appendChild(option);
+  });
+}
