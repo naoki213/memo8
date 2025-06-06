@@ -444,9 +444,9 @@ function renderFillList() {
     li.innerHTML = `
       問題${i + 1}: ${q.html}<br>
       カテゴリ: <input value="${q.category || ''}" onchange="editFillCategory(${i}, this.value)">
-      ／ 答え: ${q.answers.join(', ')}
-      <span class="score ${scoreClass}">（${q.score}）</span>
-      回答数: ${q.answerCount} ／ 正答率: ${rate}%
+      ／ 答え: ${q.answers.join(', ')} 
+      <span class="score ${scoreClass}">（${q.score}）</span> 
+      回答数: ${q.answerCount} ／ 正答率: ${rate}% 
       <button onclick="deleteFillQuestion(${i})">🗑削除</button>
     `;
     list.appendChild(li);
@@ -551,8 +551,7 @@ function downloadAllData() {
   document.body.removeChild(a);
 }
 function uploadAllData() {
-  const fileInput = document.getElementById('fileInputAll');
-
+  const fileInput = document.getElementById('fileInput');
   const file = fileInput.files[0];
   if (!file) return alert('ファイルを選択してください');
   const reader = new FileReader();
@@ -738,4 +737,10 @@ function updateFillCategoryOptions() {
     option.textContent = cat;
     select.appendChild(option);
   });
+}
+function checkCorrectAnswer() {
+  showAnswerToggle = !showAnswerToggle;
+  const answerDisplay = document.getElementById('answerText');
+  const answer = currentQueue[currentIndex]?.answer ?? '';
+  answerDisplay.textContent = showAnswerToggle ? '正解: ' + answer : '';
 }
