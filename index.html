@@ -38,6 +38,7 @@
   <h2 id="exerciseQuestion">ここに問題が表示されます</h2>
   <textarea id="exerciseAnswer" rows="3" onkeydown="checkEnter(event)" placeholder="ここに解答を入力"></textarea>
   <button onclick="startSpeechRecognition('exerciseAnswer')">🎤音声入力（解答）</button>
+  <button onclick="checkCorrectAnswer()">正答確認</button>
   <p id="correctAnswer"></p>
   <div class="btn-group">
     <button onclick="gradeAnswer('maru')">○</button>
@@ -83,7 +84,7 @@
   </div>
 
   <div id="normalListSection">
-    <input type="file" id="fileInputNormal" />
+    <input type="file" id="fileInput" />
     <div style="margin: 10px 0;">
       <button onclick="downloadQuestions()">通常問題を書き出す</button>
       <button onclick="uploadQuestions()">通常問題を読み込む</button>
@@ -92,7 +93,7 @@
   </div>
 
   <div id="fillListSection" style="display: none;">
-    <input type="file" id="fileInputAll" />
+    <input type="file" id="fileInput" />
     <div style="margin: 10px 0;">
       <button onclick="downloadAllData()">全データを書き出す</button>
       <button onclick="uploadAllData()">全データを読み込む</button>
