@@ -1,3 +1,4 @@
+
 // ================= 初期化とパスワード認証 =================
 let questions = JSON.parse(localStorage.getItem('questions') || '[]');
 let fillQuestions = JSON.parse(localStorage.getItem('fillQuestions') || '[]');
@@ -94,13 +95,29 @@ function saveQuestion() {
   const a = document.getElementById('newAnswer').value.trim();
   const c = document.getElementById('newCategory').value.trim();
   if (q && a) {
-    questions.push({ question: q, answer: a, category: c, queue: 0, origin: true, score: 0, answerCount: 0, correctCount: 0 });
+    questions.push({
+      question: q,
+      answer: a,
+      category: c,
+      queue: 0,
+      origin: true,
+      score: 0,
+      answerCount: 0,
+      correctCount: 0
+    });
+
     localStorage.setItem('questions', JSON.stringify(questions));
     document.getElementById('newQuestion').value = '';
     document.getElementById('newAnswer').value = '';
     document.getElementById('newCategory').value = '';
+
+    // 🎲 毎回ランダム画像を表示
+    const randomImage = imageList[Math.floor(Math.random() * imageList.length)];
+    const imgBox = document.getElementById('questionImageBox');
+    imgBox.innerHTML = `<img src="${randomImage}" style="max-width: 100px; max-height: 100px;">`;
   }
 }
+
 
 // ================= 通常問題：出題ロジック =================
 function startExercise() {
@@ -165,7 +182,11 @@ function gradeAnswer(grade) {
   const delta = grade === 'maru' ? 1 : grade === 'sankaku' ? -0.5 : -1;
   questions[q.index].score += delta;
   questions[q.index].answerCount++;
-  if (grade === 'maru') questions[q.index].correctCount++;
+if (grade === 'maru') {
+  questions[q.index].correctCount++;
+  addCorrectLog(); // ✅ 正解のときだけ記録される
+}
+
 
   // 🔁 不正解・部分正解の場合は currentQueue に再出題として挿入
   let insertOffset = null;
@@ -255,22 +276,13 @@ function showFillQuestion() {
         const currentInputIndex = [...inputs].indexOf(input);
 
         if (!isFillAnswered) {
-          const next = inputs[currentInputIndex + 1];
-          if (next) {
-            next.focus();
-          } else {
-            checkFillAnswer(); // 正誤判定
-          }
-        } else {
           if (e.ctrlKey) {
-            // ✅ Ctrl + Enter：正解として処理し、再出題キューから除外
+            // ✅ Ctrl+Enter：即座に正解処理、再出題から除外
             const index = currentQueue[currentIndex].index;
             fillQuestions[index].correctCount = (fillQuestions[index].correctCount ?? 0) + 1;
             fillQuestions[index].score = (fillQuestions[index].score ?? 0) + 1;
 
-            // 再出題対象から除外（currentQueue から削除）
-            currentQueue.splice(currentIndex, 1);
-
+            currentQueue.splice(currentIndex, 1); // 再出題対象から削除
             localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
 
             if (currentIndex < currentQueue.length) {
@@ -279,7 +291,31 @@ function showFillQuestion() {
               alert('全問終了');
             }
           } else {
-            // 通常の Enter → 不正解のまま次へ（currentIndex++）
+            // 通常の Enter → 次の入力欄 or 判定
+            const next = inputs[currentInputIndex + 1];
+            if (next) {
+              next.focus();
+            } else {
+              checkFillAnswer(); // 正誤判定（再出題処理あり）
+            }
+          }
+        } else {
+          // 既に解答済みの状態での Enter 処理
+          if (e.ctrlKey) {
+            const index = currentQueue[currentIndex].index;
+            fillQuestions[index].correctCount = (fillQuestions[index].correctCount ?? 0) + 1;
+            fillQuestions[index].score = (fillQuestions[index].score ?? 0) + 1;
+
+            currentQueue.splice(currentIndex, 1); // 再出題対象から削除
+            localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
+
+            if (currentIndex < currentQueue.length) {
+              showFillQuestion();
+            } else {
+              alert('全問終了');
+            }
+          } else {
+            // 通常 Enter：次の問題へ
             currentIndex++;
             if (currentIndex < currentQueue.length) {
               showFillQuestion();
@@ -300,6 +336,7 @@ function showFillQuestion() {
   const firstInput = inputArea.querySelector('input');
   if (firstInput) firstInput.focus();
 }
+
 
 function checkFillAnswer() {
   const inputs = document.querySelectorAll('#fillInputs input');
@@ -444,9 +481,9 @@ function renderFillList() {
     li.innerHTML = `
       問題${i + 1}: ${q.html}<br>
       カテゴリ: <input value="${q.category || ''}" onchange="editFillCategory(${i}, this.value)">
-      ／ 答え: ${q.answers.join(', ')} 
-      <span class="score ${scoreClass}">（${q.score}）</span> 
-      回答数: ${q.answerCount} ／ 正答率: ${rate}% 
+      ／ 答え: ${q.answers.join(', ')}
+      <span class="score ${scoreClass}">（${q.score}）</span>
+      回答数: ${q.answerCount} ／ 正答率: ${rate}%
       <button onclick="deleteFillQuestion(${i})">🗑削除</button>
     `;
     list.appendChild(li);
@@ -496,24 +533,23 @@ function uploadQuestions() {
 
 
 // ================= グラフ描画（Chart.js） =================
-function renderChart() {
+function renderChart(threshold = 3) {
   const categoryStats = {};
+
   questions.forEach(q => {
     if (!q.origin) return;
     const cat = q.category || '未分類';
-    if (!categoryStats[cat]) categoryStats[cat] = { correct: 0, total: 0 };
-    const s = q.score ?? 0;
-    const absS = Math.abs(s);
-    if (absS > 0) {
-      categoryStats[cat].total += absS;
-      if (s > 0) categoryStats[cat].correct += s;
-    }
+    if (!categoryStats[cat]) categoryStats[cat] = { countAbove: 0, total: 0 };
+
+    categoryStats[cat].total++;
+    if ((q.score ?? 0) >= threshold) categoryStats[cat].countAbove++;
   });
+
   const labels = Object.keys(categoryStats);
   const data = labels.map(cat => {
-    const { correct, total } = categoryStats[cat];
-    const rate = total === 0 ? 0 : correct / total;
-    return parseFloat((rate * 100).toFixed(2));
+    const { countAbove, total } = categoryStats[cat];
+    const rate = total === 0 ? 0 : (countAbove / total) * 100;
+    return parseFloat(rate.toFixed(2));
   });
 
   const ctx = document.getElementById('scoreChart').getContext('2d');
@@ -522,7 +558,10 @@ function renderChart() {
     type: 'bar',
     data: {
       labels: labels,
-      datasets: [{ label: '正答率（％）', data: data }]
+      datasets: [{
+        label: `スコア${threshold}以上の割合（％）`,
+        data: data
+      }]
     },
     options: {
       responsive: true,
@@ -560,15 +599,30 @@ function uploadAllData() {
       const data = JSON.parse(e.target.result);
       if (!Array.isArray(data.questions) || !Array.isArray(data.fillQuestions)) throw new Error();
 
-      // 通常問題を整形
-      questions = data.questions.map(q => ({
-        ...q,
-        origin: true,
-        score: q.score ?? 0,
-        category: q.category ?? '',
-        answerCount: q.answerCount ?? 0,
-        correctCount: q.correctCount ?? 0
-      }));
+      // 通常問題を加算マージ
+data.questions.forEach(newQ => {
+  const existingIndex = questions.findIndex(q =>
+    q.question === newQ.question && q.answer === newQ.answer
+  );
+
+  if (existingIndex >= 0) {
+    // 既存の問題があれば、数値を加算
+    questions[existingIndex].score += newQ.score ?? 0;
+    questions[existingIndex].answerCount += newQ.answerCount ?? 0;
+    questions[existingIndex].correctCount += newQ.correctCount ?? 0;
+  } else {
+    // 新規問題として追加
+    questions.push({
+      ...newQ,
+      origin: true,
+      score: newQ.score ?? 0,
+      category: newQ.category ?? '',
+      answerCount: newQ.answerCount ?? 0,
+      correctCount: newQ.correctCount ?? 0
+    });
+  }
+});
+
 
       // 穴埋め問題をそのまま格納
       fillQuestions = data.fillQuestions;
@@ -744,3 +798,22 @@ function checkCorrectAnswer() {
   const answer = currentQueue[currentIndex]?.answer ?? '';
   answerDisplay.textContent = showAnswerToggle ? '正解: ' + answer : '';
 }
+
+// ================= 正答数カウント（24時間） =================
+function addCorrectLog() {
+  const logs = JSON.parse(localStorage.getItem('correctLogs') || '[]');
+  const now = Date.now();
+  logs.push(now);
+  localStorage.setItem('correctLogs', JSON.stringify(logs));
+  updateCorrectCountDisplay();
+}
+
+function updateCorrectCountDisplay() {
+  const logs = JSON.parse(localStorage.getItem('correctLogs') || '[]');
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  const recentLogs = logs.filter(t => now - t <= ONE_DAY);
+  localStorage.setItem('correctLogs', JSON.stringify(recentLogs));
+  document.getElementById('correctCount24h').textContent = recentLogs.length;
+}
+
