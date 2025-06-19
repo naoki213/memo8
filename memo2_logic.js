@@ -1,7 +1,23 @@
-
 // ================= 初期化とパスワード認証 =================
 let questions = JSON.parse(localStorage.getItem('questions') || '[]');
 let fillQuestions = JSON.parse(localStorage.getItem('fillQuestions') || '[]');
+
+let exerciseStats = JSON.parse(localStorage.getItem('exerciseStats') || '{"correct":0,"total":0}');
+updateTotalCorrectDisplay();
+
+function updateTotalCorrectDisplay() {
+  const display = document.getElementById('totalCorrectDisplay');
+  if (display) {
+    display.textContent = `正答数: ${exerciseStats.correct} / ${exerciseStats.total}`;
+  }
+}
+
+function resetTotalCorrectDisplay() {
+  exerciseStats = { correct: 0, total: 0 };
+  localStorage.setItem('exerciseStats', JSON.stringify(exerciseStats));
+  updateTotalCorrectDisplay();
+}
+
 
 questions.forEach(q => {
   q.score = q.score ?? 0;
@@ -95,29 +111,13 @@ function saveQuestion() {
   const a = document.getElementById('newAnswer').value.trim();
   const c = document.getElementById('newCategory').value.trim();
   if (q && a) {
-    questions.push({
-      question: q,
-      answer: a,
-      category: c,
-      queue: 0,
-      origin: true,
-      score: 0,
-      answerCount: 0,
-      correctCount: 0
-    });
-
+    questions.push({ question: q, answer: a, category: c, queue: 0, origin: true, score: 0, answerCount: 0, correctCount: 0 });
     localStorage.setItem('questions', JSON.stringify(questions));
     document.getElementById('newQuestion').value = '';
     document.getElementById('newAnswer').value = '';
     document.getElementById('newCategory').value = '';
-
-    // 🎲 毎回ランダム画像を表示
-    const randomImage = imageList[Math.floor(Math.random() * imageList.length)];
-    const imgBox = document.getElementById('questionImageBox');
-    imgBox.innerHTML = `<img src="${randomImage}" style="max-width: 100px; max-height: 100px;">`;
   }
 }
-
 
 // ================= 通常問題：出題ロジック =================
 function startExercise() {
@@ -182,11 +182,7 @@ function gradeAnswer(grade) {
   const delta = grade === 'maru' ? 1 : grade === 'sankaku' ? -0.5 : -1;
   questions[q.index].score += delta;
   questions[q.index].answerCount++;
-if (grade === 'maru') {
-  questions[q.index].correctCount++;
-  addCorrectLog(); // ✅ 正解のときだけ記録される
-}
-
+  if (grade === 'maru') questions[q.index].correctCount++;
 
   // 🔁 不正解・部分正解の場合は currentQueue に再出題として挿入
   let insertOffset = null;
@@ -196,6 +192,14 @@ if (grade === 'maru') {
     const retryItem = { ...q };
     currentQueue.splice(currentIndex + insertOffset, 0, retryItem);
   }
+
+// 🔽 Aタブの正答数カウントに追加
+exerciseStats.total++;
+if (grade === 'maru') exerciseStats.correct++;
+localStorage.setItem('exerciseStats', JSON.stringify(exerciseStats));
+updateTotalCorrectDisplay();
+
+  
 
   // 保存と次の問題へ
   localStorage.setItem('questions', JSON.stringify(questions));
@@ -276,37 +280,22 @@ function showFillQuestion() {
         const currentInputIndex = [...inputs].indexOf(input);
 
         if (!isFillAnswered) {
-          if (e.ctrlKey) {
-            // ✅ Ctrl+Enter：即座に正解処理、再出題から除外
-            const index = currentQueue[currentIndex].index;
-            fillQuestions[index].correctCount = (fillQuestions[index].correctCount ?? 0) + 1;
-            fillQuestions[index].score = (fillQuestions[index].score ?? 0) + 1;
-
-            currentQueue.splice(currentIndex, 1); // 再出題対象から削除
-            localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
-
-            if (currentIndex < currentQueue.length) {
-              showFillQuestion();
-            } else {
-              alert('全問終了');
-            }
+          const next = inputs[currentInputIndex + 1];
+          if (next) {
+            next.focus();
           } else {
-            // 通常の Enter → 次の入力欄 or 判定
-            const next = inputs[currentInputIndex + 1];
-            if (next) {
-              next.focus();
-            } else {
-              checkFillAnswer(); // 正誤判定（再出題処理あり）
-            }
+            checkFillAnswer(); // 正誤判定
           }
         } else {
-          // 既に解答済みの状態での Enter 処理
           if (e.ctrlKey) {
+            // ✅ Ctrl + Enter：正解として処理し、再出題キューから除外
             const index = currentQueue[currentIndex].index;
             fillQuestions[index].correctCount = (fillQuestions[index].correctCount ?? 0) + 1;
             fillQuestions[index].score = (fillQuestions[index].score ?? 0) + 1;
 
-            currentQueue.splice(currentIndex, 1); // 再出題対象から削除
+            // 再出題対象から除外（currentQueue から削除）
+            currentQueue.splice(currentIndex, 1);
+
             localStorage.setItem('fillQuestions', JSON.stringify(fillQuestions));
 
             if (currentIndex < currentQueue.length) {
@@ -315,7 +304,7 @@ function showFillQuestion() {
               alert('全問終了');
             }
           } else {
-            // 通常 Enter：次の問題へ
+            // 通常の Enter → 不正解のまま次へ（currentIndex++）
             currentIndex++;
             if (currentIndex < currentQueue.length) {
               showFillQuestion();
@@ -336,7 +325,6 @@ function showFillQuestion() {
   const firstInput = inputArea.querySelector('input');
   if (firstInput) firstInput.focus();
 }
-
 
 function checkFillAnswer() {
   const inputs = document.querySelectorAll('#fillInputs input');
@@ -797,23 +785,5 @@ function checkCorrectAnswer() {
   const answerDisplay = document.getElementById('answerText');
   const answer = currentQueue[currentIndex]?.answer ?? '';
   answerDisplay.textContent = showAnswerToggle ? '正解: ' + answer : '';
-}
-
-// ================= 正答数カウント（24時間） =================
-function addCorrectLog() {
-  const logs = JSON.parse(localStorage.getItem('correctLogs') || '[]');
-  const now = Date.now();
-  logs.push(now);
-  localStorage.setItem('correctLogs', JSON.stringify(logs));
-  updateCorrectCountDisplay();
-}
-
-function updateCorrectCountDisplay() {
-  const logs = JSON.parse(localStorage.getItem('correctLogs') || '[]');
-  const now = Date.now();
-  const ONE_DAY = 24 * 60 * 60 * 1000;
-  const recentLogs = logs.filter(t => now - t <= ONE_DAY);
-  localStorage.setItem('correctLogs', JSON.stringify(recentLogs));
-  document.getElementById('correctCount24h').textContent = recentLogs.length;
 }
 
