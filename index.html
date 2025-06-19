@@ -33,12 +33,13 @@
   <div class="tab" onclick="switchTab(2)">確認（C）</div>
   <div class="tab" onclick="switchTab(3)">グラフ（D）</div>
 </div>
-
-<div class="content active" id="exercise-tab">
-<div id="correctCount24hBox" style="margin-bottom: 10px; font-weight: bold;">
-  正答数（過去24時間）: <span id="correctCount24h">0</span>
+<!-- 正答数表示とリセット -->
+<div style="display: flex; align-items: center; justify-content: space-between; margin: 10px 0;">
+  <div id="totalCorrectDisplay">正答数: 0 / 0</div>
+  <button onclick="resetTotalCorrectDisplay()">リセット</button>
 </div>
 
+<div class="content active" id="exercise-tab">
   <h2 id="exerciseQuestion">ここに問題が表示されます</h2>
   <textarea id="exerciseAnswer" rows="3" onkeydown="checkEnter(event)" placeholder="ここに解答を入力"></textarea>
   <button onclick="startSpeechRecognition('exerciseAnswer')">🎤音声入力（解答）</button>
@@ -65,32 +66,19 @@
 
 <div class="content" id="input-tab">
   <h2>通常問題入力</h2>
-
-  <!-- 🔽 入力＋画像表示を横並びにしたブロック -->
-  <div style="display: flex; gap: 10px;">
-    <div style="flex: 1;">
-      <textarea id="newQuestion" placeholder="問題を入力"></textarea>
-      <button onclick="startSpeechRecognition('newQuestion')">🎤音声入力（問題）</button>
-
-      <textarea id="newAnswer" placeholder="解答を入力"></textarea>
-      <button onclick="startSpeechRecognition('newAnswer')">🎤音声入力（解答）</button>
-
-      <input type="text" id="newCategory" placeholder="カテゴリを入力">
-      <br>
-      <button onclick="saveQuestion()">保存</button>
-    </div>
-
-    <!-- ✅ ランダム画像を表示するボックス -->
-    <div id="questionImageBox" style="width: 120px; height: 120px;"></div>
-  </div>
-
+  <textarea id="newQuestion" placeholder="問題を入力"></textarea>
+  <button onclick="startSpeechRecognition('newQuestion')">🎤音声入力（問題）</button>
+  <textarea id="newAnswer" placeholder="解答を入力"></textarea>
+  <button onclick="startSpeechRecognition('newAnswer')">🎤音声入力（解答）</button>
+  <input type="text" id="newCategory" placeholder="カテゴリを入力">
+  <br>
+  <button onclick="saveQuestion()">保存</button>
   <hr>
   <h2>穴埋め問題入力</h2>
   <div id="newFillQuestion" contenteditable="true" style="border:1px solid #ccc; padding:10px; min-height:100px; background:#fff;"></div>
   <input type="text" id="newFillCategory" placeholder="カテゴリを入力（穴埋め）">
   <button onclick="saveFillQuestion()">保存</button>
 </div>
-
 
 <div id="tabConfirm" class="content">
   <h2>✅ 問題一覧・編集</h2>
@@ -141,11 +129,6 @@
 
 <div class="content" id="graph-tab">
   <h2>カテゴリ別 正答率グラフ</h2>
-  <div id="scoreButtons" style="margin-bottom: 10px;">
-    <button onclick="renderChart(3)">スコア3以上</button>
-    <button onclick="renderChart(5)">スコア5以上</button>
-    <button onclick="renderChart(10)">スコア10以上</button>
-  </div>
   <canvas id="scoreChart" width="400" height="200"></canvas>
 </div>
 
