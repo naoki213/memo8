@@ -39,29 +39,60 @@
   <button onclick="resetTotalCorrectDisplay()">リセット</button>
 </div>
 
+<style>
+  @media screen and (max-width: 480px) {
+    .btn-group button {
+      font-size: 1.5em;
+      padding: 15px 25px;
+      margin: 10px 5px;
+    }
+    #exercise-tab button {
+      font-size: 1.2em;
+      padding: 15px;
+      margin: 10px 0;
+      width: 100%;
+    }
+    #exercise-tab select {
+      font-size: 1.2em;
+      padding: 10px;
+      margin-top: 10px;
+      width: 100%;
+    }
+  }
+</style>
+
 <div class="content active" id="exercise-tab">
   <h2 id="exerciseQuestion">ここに問題が表示されます</h2>
-  <textarea id="exerciseAnswer" rows="3" onkeydown="checkEnter(event)" placeholder="ここに解答を入力"></textarea>
-  <button onclick="startSpeechRecognition('exerciseAnswer')">🎤音声入力（解答）</button>
+
+  <!-- 解答欄と音声入力ボタンは非表示 -->
+  <textarea id="exerciseAnswer" rows="3" style="display:none;"></textarea>
+  <button onclick="startSpeechRecognition('exerciseAnswer')" style="display:none;">🎤音声入力（解答）</button>
+
+  <!-- 正答確認ボタンと正答表示 -->
   <button onclick="checkCorrectAnswer()">正答確認</button>
   <p id="correctAnswer"></p>
-  <div class="btn-group">
+
+  <!-- 〇△×ボタン（横並びで大きく） -->
+  <div class="btn-group" style="display: flex; justify-content: center;">
     <button onclick="gradeAnswer('maru')">○</button>
     <button onclick="gradeAnswer('sankaku')">△</button>
     <button onclick="gradeAnswer('batsu')">×</button>
   </div>
+
+  <!-- 出題開始ボタン（大きめ・全幅） -->
   <button onclick="startExercise()">通常出題スタート</button>
   <button onclick="startLowScoreExercise()">スコア-3以下だけ出題</button>
-  <br><br>
+
+  <!-- カテゴリ選択と出題 -->
   <select id="categorySelect"></select>
   <button onclick="startExerciseByCategory()">このカテゴリで出題</button>
-  <hr>
-  <h2>穴埋め問題</h2>
-  <div id="fillQuestionDisplay"></div>
-  <div id="fillInputs"></div>
-  <p id="fillResult"></p>
-  <select id="fillCategorySelect"></select>
-  <button onclick="startFillExerciseByCategory()">このカテゴリで出題</button>
+
+  <!-- 穴埋め問題は完全に非表示 -->
+  <div id="fillQuestionDisplay" style="display: none;"></div>
+  <div id="fillInputs" style="display: none;"></div>
+  <p id="fillResult" style="display: none;"></p>
+  <select id="fillCategorySelect" style="display: none;"></select>
+  <button onclick="startFillExerciseByCategory()" style="display: none;">このカテゴリで出題</button>
 </div>
 
 <div class="content" id="input-tab">
