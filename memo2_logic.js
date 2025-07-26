@@ -790,7 +790,7 @@ function checkCorrectAnswer() {
 // ================= スコア+3以下の問題だけを出題 =================
 function startScoreUnderThreeExercise() {
   const targetQuestions = questions.map((q, i) => ({ ...q, index: i }))
-    .filter(q => q.origin && q.score <= 3);
+    .filter(q => q.origin && q.score <= 2);
   if (targetQuestions.length === 0) return alert('スコア+3以下の問題がありません');
 
   const weighted = [];
