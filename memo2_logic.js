@@ -787,3 +787,20 @@ function checkCorrectAnswer() {
   answerDisplay.textContent = showAnswerToggle ? '正解: ' + answer : '';
 }
 
+// ================= スコア+3以下の問題だけを出題 =================
+function startScoreUnderThreeExercise() {
+  const targetQuestions = questions.map((q, i) => ({ ...q, index: i }))
+    .filter(q => q.origin && q.score <= 3);
+  if (targetQuestions.length === 0) return alert('スコア+3以下の問題がありません');
+
+  const weighted = [];
+  targetQuestions.forEach(q => {
+    const weight = Math.max(1, 10 - q.score);
+    for (let j = 0; j < weight; j++) weighted.push(q);
+  });
+
+  shuffle(weighted);
+  currentQueue = weighted;
+  currentIndex = 0;
+  nextQuestion();
+}
