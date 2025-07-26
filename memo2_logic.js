@@ -791,7 +791,7 @@ function checkCorrectAnswer() {
 function startScoreUnderThreeExercise() {
   const targetQuestions = questions.map((q, i) => ({ ...q, index: i }))
     .filter(q => q.origin && q.score <= 2);
-  if (targetQuestions.length === 0) return alert('スコア+3以下の問題がありません');
+  if (targetQuestions.length === 0) return alert('スコア+2以下の問題がありません');
 
   const weighted = [];
   targetQuestions.forEach(q => {
