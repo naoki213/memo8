@@ -804,3 +804,76 @@ function startScoreUnderThreeExercise() {
   currentIndex = 0;
   nextQuestion();
 }
+
+// ---（あなたの既存コードの最後）---
+
+// ================= 通常問題：編集・削除 =================
+function editQuestion(index, field, value) {
+  questions[index][field] = value;
+  localStorage.setItem('questions', JSON.stringify(questions));
+}
+
+// ✅ ここから新機能のグラフ描画（スコア3〜10）を追加
+let chartInstance = null;
+
+function renderChartByThreshold() {
+  const threshold = parseInt(document.getElementById('scoreThresholdSelect').value);
+  renderChart(threshold);
+}
+
+function renderChart(scoreThreshold = 3) {
+  const categoryStats = {};
+  questions.forEach(q => {
+    const cat = q.category || '未分類';
+    if (!categoryStats[cat]) {
+      categoryStats[cat] = { total: 0, above: 0 };
+    }
+    categoryStats[cat].total++;
+    if (q.score >= scoreThreshold) {
+      categoryStats[cat].above++;
+    }
+  });
+
+  const labels = Object.keys(categoryStats);
+  const data = labels.map(cat => {
+    const stats = categoryStats[cat];
+    const ratio = stats.total > 0 ? stats.above / stats.total : 0;
+    return Math.round(ratio * 100);
+  });
+
+  const ctx = document.getElementById('scoreChart').getContext('2d');
+
+  if (chartInstance) {
+    chartInstance.destroy();
+  }
+
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: `スコア${scoreThreshold}以上の割合（%）`,
+        data: data,
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          title: { display: true, text: '割合（％）' }
+        },
+        x: {
+          title: { display: true, text: 'カテゴリ' }
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
