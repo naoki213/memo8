@@ -163,8 +163,20 @@
 
 <div class="content" id="graph-tab">
   <h2>カテゴリ別 正答率グラフ</h2>
+
+  <!-- 🔽 スコア閾値の切り替えUI（セレクトボックス） -->
+  <label for="scoreThresholdSelect">スコア条件：</label>
+  <select id="scoreThresholdSelect" onchange="renderChartByThreshold()">
+    <option value="3">スコア3以上</option>
+    <option value="5">スコア5以上</option>
+    <option value="7">スコア7以上</option>
+    <option value="10">スコア10以上</option>
+  </select>
+
+  <!-- 🔽 グラフキャンバス -->
   <canvas id="scoreChart" width="400" height="200"></canvas>
 </div>
+
 
 <script src="./memo2_logic.js"></script>
 </body>
