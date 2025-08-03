@@ -790,7 +790,7 @@ function checkCorrectAnswer() {
 // ================= スコア+3以下の問題だけを出題 =================
 function startScoreUnderThreeExercise() {
   const targetQuestions = questions.map((q, i) => ({ ...q, index: i }))
-    .filter(q => q.origin && q.score <= 4.5);
+    .filter(q => q.origin && q.score <= 6.5);
   if (targetQuestions.length === 0) return alert('スコア+4.5以下の問題がありません');
 
   const weighted = [];
@@ -877,3 +877,4 @@ function renderChart(scoreThreshold = 3) {
     }
   });
 }
+
